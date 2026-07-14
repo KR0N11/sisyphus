@@ -57,6 +57,8 @@ Runs the newest checkpoint deterministically and prints each episode's clear tim
 
 Loads a checkpoint into a big wall of instances at real-time speed, no training, pure spectacle. Press `q` to quit.
 
+**The full story and the RL concepts behind it: [docs/JOURNEY.md](docs/JOURNEY.md).**
+
 ## Roadmap
 
 1. Reliable 1-1 completion (current phase)
