@@ -18,7 +18,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 
 from ghost import Ghost
 from hud import compose, with_banner
-from mario_env import FRAME_SKIP
+from mario_env import FRAME_SKIP, GAME_FPS
 
 SNAPSHOT = Path(__file__).resolve().parents[1] / "runs" / "latest.png"
 CKPT_DIR = Path(__file__).resolve().parents[1] / "checkpoints"
@@ -81,7 +81,7 @@ class GhostRenderCallback(BaseCallback):
         self.num_envs = num_envs
         self.realtime = realtime
         self.display = display
-        self._step_period = FRAME_SKIP / 60.0
+        self._step_period = FRAME_SKIP / GAME_FPS
         self._next_step_t: float | None = None
         self._last_render = 0.0
         self._last_snapshot = 0.0
@@ -103,7 +103,7 @@ class GhostRenderCallback(BaseCallback):
                 self.episodes += 1
                 if infos[i].get("flag_get"):
                     self.flags += 1
-                    clear_s = self.ep_steps[i] * FRAME_SKIP / 60.0
+                    clear_s = self.ep_steps[i] * FRAME_SKIP / GAME_FPS
                     if self.best_clear_s is None or clear_s < self.best_clear_s:
                         self.best_clear_s = clear_s
                         if self.verbose:

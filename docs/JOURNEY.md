@@ -72,18 +72,26 @@ This is also why the progress chart looks like stairs, not a ramp: long flat str
 - **Checkpoints are the only storage that matters.** One ~20MB file per snapshot. We keep the newest 5 plus million-step milestones, auto-delete the rest, and a hard 5GB fuse protects the disk no matter what. Trained models are published as GitHub Releases so nobody has to retrain from scratch.
 - **Test the pipeline before trusting it.** The first training run silently lost progress because the display code was writing a screenshot to disk 40 times per second and the first checkpoint hadn't landed yet. Cheap sanity checks first, long runs second.
 
-## Part 6: The scoreboard so far
+## Part 6: The PAL plot twist (why you should always verify)
+
+After the AI beat the ghost, an outside claim ("that time is physically impossible") triggered a full audit, and the audit won. Reading Mario's velocity straight out of the game's RAM showed max run speed 0x30 (3.0 px/frame) where the famous NTSC game uses 0x28 (2.5), and the in-game timer ticked every 20 frames instead of 24. Both differences are exactly +20%, which is the fingerprint of the **PAL (European) version**: Nintendo made PAL Mario faster per frame to compensate for PAL TVs running at 50fps. The bundled ROM has PAL physics, and the emulator was playing it at 60fps, so everything genuinely ran 20% faster than real-world Mario. A ROM checksum comparison against the world-record TAS's expected ROM confirmed the mismatch (and finally explained why the real TAS inputs desynced).
+
+The fix: report time as frames/50 and pace the display at 50fps. Every comparison inside the arena was always fair (both the AI and the ghost lived in the same physics), only the conversion to human seconds was wrong.
+
+The lesson for any ML project: when someone challenges your numbers, don't argue, instrument. The game's own RAM settled in minutes what could have been an endless debate.
+
+## Part 7: The scoreboard (corrected, real-world seconds)
 
 | Milestone | Time |
 |---|---|
-| Ghost (auto-tuned WR-style run, 17 jumps) | **19.60s** |
-| First ever clear (fresh model) | 76.67s |
-| After resume + speed pressure | 32.33s |
-| Same session, later | 24.93s |
-| Current best | 22.13s |
+| Ghost (auto-tuned WR-style run, 17 jumps) | **23.54s** |
+| First ever clear (fresh model) | 92.0s |
+| After resume + speed pressure | 38.8s |
+| Later that session | 29.9s |
+| **Final: AI beats the ghost** | **23.44s** |
 
-The gap left to the ghost is hesitation: late jumps, momentum lost on landings. That's exactly what repetition polishes.
+The AI closed a 68-second gap to WR pace in about 650k steps of self-play.
 
-## Part 7: What's next
+## Part 8: What's next
 
 Once the ghost falls: the whole game, the speedrunner way. Real world records don't play all 32 levels, they use the warp zones: 1-1, 1-2, 4-1, 4-2, then all of world 8. Eight levels, eight small brains (one per level, ~160MB total), transfer learning from each level to the next, and the nastiest challenge in the project: teaching an AI paid to "go right" that in 4-2, the fastest way forward is a warp zone hidden off the obvious path.

@@ -18,7 +18,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack
 import ghost as ghost_mod
 from evaluate import newest_checkpoint
 from hud import compose
-from mario_env import FRAME_SKIP, make_env
+from mario_env import FRAME_SKIP, GAME_FPS, make_env
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,8 +29,8 @@ def main() -> None:
     p.add_argument("--model", type=Path, default=None)
     p.add_argument("--num-envs", type=int, default=12,
                    help="wall size; more instances = more CPU load")
-    p.add_argument("--fps", type=float, default=60.0,
-                   help="target display frame rate (game frames per second)")
+    p.add_argument("--fps", type=float, default=GAME_FPS,
+                   help="target game speed in frames per second (50 = real-world 1:1)")
     args = p.parse_args()
 
     model_path = args.model or newest_checkpoint(args.level)
@@ -58,7 +58,7 @@ def main() -> None:
                 episodes += 1
                 if infos[i].get("flag_get"):
                     flags += 1
-                    clear_s = ep_steps[i] * FRAME_SKIP / 60.0
+                    clear_s = ep_steps[i] * FRAME_SKIP / GAME_FPS
                     best = clear_s if best is None or clear_s < best else best
                 ep_steps[i] = 0
             states.append({"x": int(infos[i].get("x_pos", 0)),

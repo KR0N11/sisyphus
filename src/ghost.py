@@ -23,6 +23,7 @@ def for_level(level: str):
 
 
 GROUND_TOP = 192  # screen y of a grounded small Mario's sprite top
+GAME_FPS = 50     # PAL-physics ROM: real-world seconds = frames / 50
 
 
 class Ghost:
@@ -33,7 +34,8 @@ class Ghost:
         self.start_x: float = data["start_x"]
         self.flag_x: float = data["flag_x"]
         self.finish_frame: int = data["finish_frame"]
-        self.finish_time_s: float = data["finish_time_s"]
+        # recomputed at load so old traces stay valid after the fps correction
+        self.finish_time_s: float = round(self.finish_frame / GAME_FPS, 2)
         self.source: str = data["source"]
 
     def x_at(self, frame: int) -> float:

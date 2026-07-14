@@ -10,7 +10,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 
 import ghost as ghost_mod
-from mario_env import FRAME_SKIP, make_env
+from mario_env import FRAME_SKIP, GAME_FPS, make_env
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -49,7 +49,7 @@ def main() -> None:
             obs, _, dones, infos = env.step(action)
             done, info = dones[0], infos[0]
             steps += 1
-        clear_s = steps * FRAME_SKIP / 60.0
+        clear_s = steps * FRAME_SKIP / GAME_FPS
         if info.get("flag_get"):
             vs = ""
             if ghost:

@@ -13,6 +13,11 @@ from stable_baselines3.common.atari_wrappers import MaxAndSkipEnv, WarpFrame
 
 FRAME_SKIP = 4
 
+# The bundled ROM uses PAL physics constants (max run speed 0x30, timer tick
+# every 20 frames), i.e. it was balanced for 50fps. Pacing and time reporting
+# use 50fps so gameplay speed and clear times match the real-world game.
+GAME_FPS = 50
+
 
 def env_id(level: str) -> str:
     return f"SuperMarioBros-{level}-v0"
