@@ -11,10 +11,14 @@ from pathlib import Path
 GHOST_PATH = Path(__file__).resolve().parents[1] / "data" / "ghost_1_1.json"
 
 
+GROUND_TOP = 192  # screen y of a grounded small Mario's sprite top
+
+
 class Ghost:
     def __init__(self, path: Path = GHOST_PATH):
         data = json.loads(Path(path).read_text())
         self.frames: list[float] = data["frames"]
+        self.y_top: list[int] | None = data.get("y_top")
         self.start_x: float = data["start_x"]
         self.flag_x: float = data["flag_x"]
         self.finish_frame: int = data["finish_frame"]
@@ -26,6 +30,13 @@ class Ghost:
         if frame >= len(self.frames):
             return self.flag_x
         return self.frames[frame]
+
+    def y_top_at(self, frame: int) -> int:
+        """Screen y of the ghost sprite's top edge (jumps included when the
+        trace has y data; grounded otherwise)."""
+        if self.y_top is None or frame >= len(self.y_top):
+            return GROUND_TOP
+        return self.y_top[frame]
 
     def progress_at(self, frame: int) -> float:
         """0..1 fraction of the level the ghost has covered at this frame."""

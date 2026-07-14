@@ -21,7 +21,6 @@ WHITE = (240, 240, 240)
 GRAY = (90, 90, 90)
 
 GHOST_OPACITY = 0.45
-GROUND_Y = 208  # screen y of the floor's top surface in 1-1
 _SPRITE_PATH = Path(__file__).resolve().parents[1] / "data" / "ghost_sprite.png"
 _sprite_cache: list = []
 
@@ -39,21 +38,23 @@ def _ghost_sprite():
     return _sprite_cache[0]
 
 
-def _overlay_ghost(tile, ghost_x, cam_x):
-    """Blend the translucent pro-Mario at the ghost's world x on this tile."""
+def _overlay_ghost(tile, ghost_x, ghost_top_y, cam_x):
+    """Blend the translucent pro-Mario at the ghost's world x/y on this tile."""
     sprite = _ghost_sprite()
     if sprite is None:
         return
     bgr, alpha = sprite
     h, w = bgr.shape[:2]
-    sx, sy = int(ghost_x - cam_x), GROUND_Y - h
-    if sx + w <= 0 or sx >= TILE_W:
+    sx, sy = int(ghost_x - cam_x), int(ghost_top_y)
+    if sx + w <= 0 or sx >= TILE_W or sy + h <= 0 or sy >= TILE_H:
         return
     x0, x1 = max(sx, 0), min(sx + w, TILE_W)
-    cx0, cx1 = x0 - sx, x1 - sx
-    region = tile[sy:sy + h, x0:x1].astype(np.float32)
-    a = alpha[:, cx0:cx1]
-    tile[sy:sy + h, x0:x1] = (region * (1 - a) + bgr[:, cx0:cx1] * a).astype(np.uint8)
+    y0, y1 = max(sy, 0), min(sy + h, TILE_H)
+    cx0, cx1, cy0, cy1 = x0 - sx, x1 - sx, y0 - sy, y1 - sy
+    region = tile[y0:y1, x0:x1].astype(np.float32)
+    a = alpha[cy0:cy1, cx0:cx1]
+    tile[y0:y1, x0:x1] = (region * (1 - a)
+                          + bgr[cy0:cy1, cx0:cx1] * a).astype(np.uint8)
 
 
 def compose(frames, states, ghost, stats):
@@ -72,7 +73,8 @@ def compose(frames, states, ghost, stats):
         s = states[i]
         ghost_x = ghost.x_at(s["frame"])
         delta = s["x"] - ghost_x
-        _overlay_ghost(tile, ghost_x, s["x"] - s.get("screen_x", 0))
+        _overlay_ghost(tile, ghost_x, ghost.y_top_at(s["frame"]),
+                       s["x"] - s.get("screen_x", 0))
         color = GREEN if delta >= 0 else RED
         cv2.rectangle(tile, (0, 0), (TILE_W - 1, TILE_H - 1), color, 3)
         sign = "+" if delta >= 0 else ""
@@ -92,6 +94,18 @@ def compose(frames, states, ghost, stats):
                 (12, 29), FONT, scale, WHITE, 1, cv2.LINE_AA)
 
     return np.vstack([header, grid, _race_bar(grid.shape[1], states, ghost)])
+
+
+def with_banner(img, text):
+    """Dim a center strip and print text over it (shown during PPO updates)."""
+    out = img.copy()
+    h, w = out.shape[:2]
+    y0, y1 = h // 2 - 36, h // 2 + 36
+    out[y0:y1] = (out[y0:y1].astype(np.float32) * 0.25).astype(np.uint8)
+    size = cv2.getTextSize(text, FONT, 1.0, 2)[0]
+    cv2.putText(out, text, ((w - size[0]) // 2, h // 2 + 12),
+                FONT, 1.0, WHITE, 2, cv2.LINE_AA)
+    return out
 
 
 def _race_bar(width, states, ghost):

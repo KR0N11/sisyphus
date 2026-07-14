@@ -16,7 +16,7 @@ import cv2
 from stable_baselines3.common.callbacks import BaseCallback
 
 from ghost import Ghost
-from hud import compose
+from hud import compose, with_banner
 from mario_env import FRAME_SKIP
 
 SNAPSHOT = Path(__file__).resolve().parents[1] / "runs" / "latest.png"
@@ -77,15 +77,31 @@ class GhostRenderCallback(BaseCallback):
             self._render(now)
         return True
 
-    def _render(self, now: float) -> None:
-        self._last_render = now
+    def _on_rollout_start(self) -> None:
+        self._rollout_start_eps = self.episodes
+        self._next_step_t = None  # resync realtime pacing after the update
+
+    def _on_rollout_end(self) -> None:
+        """Called right before the PPO update: label the pause on screen."""
+        if not self.display:
+            return
+        runs = self.episodes - getattr(self, "_rollout_start_eps", 0)
+        img = with_banner(self._compose(), f"STUDYING LAST {runs} RUNS...")
+        cv2.imshow("mario-rl: AI vs WR ghost", img)
+        cv2.waitKey(1)
+
+    def _compose(self):
         frames = self.training_env.get_images()
         states = [{"x": self.last_x[i], "screen_x": self.last_screen_x[i],
                    "frame": self.ep_steps[i] * FRAME_SKIP}
                   for i in range(self.num_envs)]
         stats = {"steps": self.num_timesteps, "episodes": self.episodes,
                  "flags": self.flags, "best": self.best_clear_s}
-        img = compose(frames, states, self.ghost, stats)
+        return compose(frames, states, self.ghost, stats)
+
+    def _render(self, now: float) -> None:
+        self._last_render = now
+        img = self._compose()
         if now - self._last_snapshot >= SNAPSHOT_PERIOD:
             self._last_snapshot = now
             SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)

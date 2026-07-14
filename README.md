@@ -9,7 +9,7 @@ A **translucent ghost Mario** runs inside every tile at world-record pace (when 
 - **Environment**: `gym-super-mario-bros` (Gymnasium-native, runs a real NES emulator per instance via `nes-py`). N instances run in parallel subprocesses through Stable-Baselines3's `SubprocVecEnv`.
 - **The AI**: Stable-Baselines3 PPO with a small CNN. It sees 4 stacked 84x84 grayscale frames (frame skip 4) and picks one of 7 `SIMPLE_MOVEMENT` actions. Community-proven hyperparameters: lr `1e-4`, gamma `0.9`, 512-step rollouts, 10 epochs per update.
 - **Reward**: the env's built-in speed-biased reward (rightward velocity + clock penalty + death penalty), shaped with score-delta/40, +50 for the flag, -50 for dying, scaled by 1/10 (`src/mario_env.py`).
-- **The ghost** (`data/ghost_1_1.json`): a frame-by-frame x-position trace at world-record pace, finishing 1-1 in **20.77s**. The bundled trace is a synthetic max-run-speed model (`scripts/make_ghost.py`); any real WR/TAS trace in the same JSON format is a drop-in replacement.
+- **The ghost** (`data/ghost_1_1.json`): a frame-by-frame x/y trace of a WR-style speedrun. `scripts/make_pro_run.py` generates it by auto-tuning jump timings inside the emulator (hold max run speed, search the fastest jump for every pipe, pit, and staircase, with backtracking when a jump line dead-ends), so the ghost jumps obstacles the way a record run does. `scripts/record_tas_ghost.py` can instead replay a real .fm2 TAS movie, but frame-perfect TAS inputs desync between emulators (nes-py vs FCEUX lag-frame timing), so the auto-tuned run is the default. `scripts/make_ghost.py` makes a simple straight-line pace ghost as a fallback.
 - **The display** (`src/hud.py`): full-color frames from every emulator are tiled into one mosaic. Each tile gets the low-opacity ghost Mario sprite drawn at the ghost's world position (camera offset derived from the env's `left_x_pos`), plus per-instance ghost deltas, a stats header (steps, episodes, flags, best clear time), and the leader-vs-ghost race bar. The sprite itself is extracted from the emulator at runtime by `scripts/make_ghost_sprite.py` (Mario jumps, we grab him mid-air against clean sky).
 
 ## Setup
@@ -25,11 +25,13 @@ python scripts/make_ghost.py
 ## Train
 
 ```
-.venv/bin/python src/train.py --num-envs 10
+.venv/bin/python src/train.py --num-envs 10 --realtime --device mps
 ```
 
+- `--realtime` paces the game to true NES speed so the wall is watchable (training runs ~2x slower). Omit it for max-speed learning (Marios fast-forward).
+- `--device mps` runs the network on Apple GPU, which shrinks the between-rollout "STUDYING..." pauses. PPO must pause play to learn: it collects 512 decisions per instance, studies that batch 10 times, discards it, and resumes, that pause is fundamental to on-policy RL, not a hang.
 - Match `--num-envs` to your CPU core count; emulators are CPU-bound and extra instances beyond that just time-slice.
-- `--no-display` for headless training (a HUD snapshot is still written to `runs/latest.png` continuously).
+- `--no-display` for headless training (a HUD snapshot is still written to `runs/latest.png` every couple of seconds).
 - Checkpoints land in `checkpoints/` every 100k steps; resume anytime with `--resume checkpoints/<file>.zip`.
 - TensorBoard logs: `runs/tb`.
 
