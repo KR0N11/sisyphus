@@ -26,7 +26,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--model", type=Path, default=None)
-    p.add_argument("--num-envs", type=int, default=30)
+    p.add_argument("--num-envs", type=int, default=12,
+                   help="wall size; more instances = more CPU load")
     p.add_argument("--fps", type=float, default=60.0,
                    help="target display frame rate (game frames per second)")
     args = p.parse_args()
