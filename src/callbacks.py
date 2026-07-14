@@ -27,15 +27,48 @@ KEEP_RECENT_CKPTS = 5      # newest step-numbered checkpoints to keep
 MILESTONE_STEPS = 1_000_000  # step-numbered checkpoints on these multiples survive
 
 
+MAX_PROJECT_BYTES = 5 * 1024**3  # hard cap for checkpoints + runs combined
+RUNS_DIR = Path(__file__).resolve().parents[1] / "runs"
+
+
+def _step_of(p: Path) -> int:
+    return int(p.stem.split("_")[-2])
+
+
 def prune_checkpoints() -> None:
     """Keep the newest N step checkpoints plus 1M-step milestones."""
-    def step_of(p: Path) -> int:
-        return int(p.stem.split("_")[-2])
-
-    ckpts = sorted(CKPT_DIR.glob("ppo_mario_*_steps.zip"), key=step_of)
+    ckpts = sorted(CKPT_DIR.glob("ppo_mario_*_steps.zip"), key=_step_of)
     for p in ckpts[:-KEEP_RECENT_CKPTS]:
-        if step_of(p) % MILESTONE_STEPS:
+        if _step_of(p) % MILESTONE_STEPS:
             p.unlink(missing_ok=True)
+
+
+def _dir_bytes(d: Path) -> int:
+    return sum(f.stat().st_size for f in d.rglob("*") if f.is_file())
+
+
+def enforce_storage_budget() -> None:
+    """Hard 5GB cap on generated artifacts. Sacrifice order: old TensorBoard
+    runs, then oldest step checkpoints (milestones included). The newest
+    checkpoint and ppo_mario_latest.zip are never deleted."""
+    def used() -> int:
+        return sum(_dir_bytes(d) for d in (CKPT_DIR, RUNS_DIR) if d.exists())
+
+    if used() <= MAX_PROJECT_BYTES:
+        return
+    tb_runs = sorted((RUNS_DIR / "tb").glob("PPO_*"), key=lambda p: p.stat().st_mtime)
+    for old_tb in tb_runs[:-1]:
+        for f in sorted(old_tb.rglob("*"), reverse=True):
+            f.unlink(missing_ok=True) if f.is_file() else f.rmdir()
+        old_tb.rmdir()
+        if used() <= MAX_PROJECT_BYTES:
+            return
+    ckpts = sorted(CKPT_DIR.glob("ppo_mario_*_steps.zip"), key=_step_of)
+    for p in ckpts[:-1]:
+        p.unlink(missing_ok=True)
+        if used() <= MAX_PROJECT_BYTES:
+            return
+    print(f"storage budget warning: still {used() / 1e9:.2f}GB after pruning")
 
 
 class GhostRenderCallback(BaseCallback):
@@ -95,6 +128,7 @@ class GhostRenderCallback(BaseCallback):
         self._rollout_start_eps = self.episodes
         self._next_step_t = None  # resync realtime pacing after the update
         prune_checkpoints()
+        enforce_storage_budget()
 
     def _on_rollout_end(self) -> None:
         """Called right before the PPO update: label the pause on screen."""

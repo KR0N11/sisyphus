@@ -12,6 +12,12 @@ A **translucent ghost Mario** runs inside every tile at world-record pace (when 
 - **The ghost** (`data/ghost_1_1.json`): a frame-by-frame x/y trace of a WR-style speedrun. `scripts/make_pro_run.py` generates it by auto-tuning jump timings inside the emulator (hold max run speed, search the fastest jump for every pipe, pit, and staircase, with backtracking when a jump line dead-ends), so the ghost jumps obstacles the way a record run does. `scripts/record_tas_ghost.py` can instead replay a real .fm2 TAS movie, but frame-perfect TAS inputs desync between emulators (nes-py vs FCEUX lag-frame timing), so the auto-tuned run is the default. `scripts/make_ghost.py` makes a simple straight-line pace ghost as a fallback.
 - **The display** (`src/hud.py`): full-color frames from every emulator are tiled into one mosaic. Each tile gets the low-opacity ghost Mario sprite drawn at the ghost's world position (camera offset derived from the env's `left_x_pos`), plus per-instance ghost deltas, a stats header (steps, episodes, flags, best clear time), and the leader-vs-ghost race bar. The sprite itself is extracted from the emulator at runtime by `scripts/make_ghost_sprite.py` (Mario jumps, we grab him mid-air against clean sky).
 
+## Pretrained model (skip training)
+
+Trained checkpoints are published on the repo's **Releases** page so nobody has to retrain from scratch: download the `.zip` into `checkpoints/`, then run `src/watch.py` (spectate) or `src/evaluate.py` (measure clear times). Training picks up from it with `--resume checkpoints/<file>.zip`.
+
+Generated artifacts (checkpoints + logs) are hard-capped at **5GB** locally: oldest TensorBoard runs and checkpoints are auto-deleted first, and the newest model is never touched.
+
 ## Setup
 
 Requires Python 3.13+.
