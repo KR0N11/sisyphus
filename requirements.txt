@@ -1,0 +1,5 @@
+gym-super-mario-bros>=9.1.0
+nes-py>=9.0.1
+stable-baselines3>=2.9.0
+opencv-python>=4.10
+tensorboard>=2.18
