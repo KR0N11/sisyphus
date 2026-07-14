@@ -75,29 +75,38 @@ def compose(frames, states, ghost, stats):
         if tile.shape[:2] != (TILE_H, TILE_W):
             tile = cv2.resize(tile, (TILE_W, TILE_H))
         s = states[i]
-        ghost_x = ghost.x_at(s["frame"])
-        delta = s["x"] - ghost_x
-        _overlay_ghost(tile, ghost_x, ghost.y_top_at(s["frame"]),
-                       s["x"] - s.get("screen_x", 0))
-        color = GREEN if delta >= 0 else RED
-        cv2.rectangle(tile, (0, 0), (TILE_W - 1, TILE_H - 1), color, 3)
-        sign = "+" if delta >= 0 else ""
         cv2.rectangle(tile, (3, TILE_H - 26), (TILE_W - 4, TILE_H - 4), (15, 15, 15), -1)
-        cv2.putText(tile, f"#{i}  x={s['x']}  {sign}{int(delta)} vs ghost",
-                    (8, TILE_H - 10), FONT, 0.45, WHITE, 1, cv2.LINE_AA)
+        if ghost is not None:
+            ghost_x = ghost.x_at(s["frame"])
+            delta = s["x"] - ghost_x
+            _overlay_ghost(tile, ghost_x, ghost.y_top_at(s["frame"]),
+                           s["x"] - s.get("screen_x", 0))
+            cv2.rectangle(tile, (0, 0), (TILE_W - 1, TILE_H - 1),
+                          GREEN if delta >= 0 else RED, 3)
+            sign = "+" if delta >= 0 else ""
+            label = f"#{i}  x={s['x']}  {sign}{int(delta)} vs ghost"
+        else:
+            cv2.rectangle(tile, (0, 0), (TILE_W - 1, TILE_H - 1), GRAY, 3)
+            label = f"#{i}  x={s['x']}"
+        cv2.putText(tile, label, (8, TILE_H - 10), FONT, 0.45, WHITE, 1, cv2.LINE_AA)
         grid[r * TILE_H:(r + 1) * TILE_H, c * TILE_W:(c + 1) * TILE_W] = tile
 
     header = np.full((HEADER_H, grid.shape[1], 3), 28, np.uint8)
     best = stats.get("best")
     best_txt = f"{best:.2f}s" if best is not None else "none yet"
+    ghost_txt = (f"vs WR GHOST ({ghost.finish_time_s:.2f}s)" if ghost is not None
+                 else "(no ghost for this level)")
     scale = 0.62 if grid.shape[1] >= 1000 else 0.42
     cv2.putText(header,
-                f"MARIO RL vs WR GHOST ({ghost.finish_time_s:.2f}s)   "
+                f"MARIO RL {stats.get('level', '')} {ghost_txt}   "
                 f"steps {stats.get('steps', 0):,}   episodes {stats.get('episodes', 0)}   "
                 f"flags {stats.get('flags', 0)}   best clear: {best_txt}",
                 (12, 29), FONT, scale, WHITE, 1, cv2.LINE_AA)
 
-    return np.vstack([header, grid, _race_bar(grid.shape[1], states, ghost)])
+    parts = [header, grid]
+    if ghost is not None:
+        parts.append(_race_bar(grid.shape[1], states, ghost))
+    return np.vstack(parts)
 
 
 def with_banner(img, text):

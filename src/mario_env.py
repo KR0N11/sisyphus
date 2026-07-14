@@ -11,8 +11,11 @@ from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
 from nes_py.wrappers import JoypadSpace
 from stable_baselines3.common.atari_wrappers import MaxAndSkipEnv, WarpFrame
 
-LEVEL = "SuperMarioBros-1-1-v0"
 FRAME_SKIP = 4
+
+
+def env_id(level: str) -> str:
+    return f"SuperMarioBros-{level}-v0"
 
 
 class SpeedReward(gym.Wrapper):
@@ -41,11 +44,11 @@ class SpeedReward(gym.Wrapper):
         return obs, reward / 10.0, terminated, truncated, info
 
 
-def make_env(rank: int = 0):
+def make_env(rank: int = 0, level: str = "1-1"):
     """Thunk for SubprocVecEnv: each subprocess builds its own emulator."""
 
     def _init() -> gym.Env:
-        env = gym_super_mario_bros.make(LEVEL, render_mode="rgb_array")
+        env = gym_super_mario_bros.make(env_id(level), render_mode="rgb_array")
         env = JoypadSpace(env, SIMPLE_MOVEMENT)
         env = SpeedReward(env)
         env = MaxAndSkipEnv(env, skip=FRAME_SKIP)

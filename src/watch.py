@@ -15,8 +15,8 @@ import cv2
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack
 
+import ghost as ghost_mod
 from evaluate import newest_checkpoint
-from ghost import Ghost
 from hud import compose
 from mario_env import FRAME_SKIP, make_env
 
@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--level", default="1-1")
     p.add_argument("--model", type=Path, default=None)
     p.add_argument("--num-envs", type=int, default=12,
                    help="wall size; more instances = more CPU load")
@@ -32,9 +33,10 @@ def main() -> None:
                    help="target display frame rate (game frames per second)")
     args = p.parse_args()
 
-    model_path = args.model or newest_checkpoint()
-    ghost = Ghost()
-    env = VecFrameStack(SubprocVecEnv([make_env(i) for i in range(args.num_envs)]), n_stack=4)
+    model_path = args.model or newest_checkpoint(args.level)
+    ghost = ghost_mod.for_level(args.level)
+    env = VecFrameStack(SubprocVecEnv([make_env(i, args.level)
+                                       for i in range(args.num_envs)]), n_stack=4)
     model = PPO.load(model_path, device="cpu")
     print(f"showcasing {model_path.name} on {args.num_envs} envs; q to quit")
 
@@ -64,7 +66,8 @@ def main() -> None:
                            "frame": ep_steps[i] * FRAME_SKIP})
 
         img = compose(env.get_images(), states, ghost,
-                      {"steps": 0, "episodes": episodes, "flags": flags, "best": best})
+                      {"steps": 0, "episodes": episodes, "flags": flags,
+                       "best": best, "level": args.level})
         cv2.imshow("mario-rl showcase: AI vs WR ghost", img)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break

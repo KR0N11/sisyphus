@@ -17,8 +17,8 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack, VecMonitor
 
-from callbacks import GhostRenderCallback
-from ghost import Ghost
+import ghost as ghost_mod
+from callbacks import GhostRenderCallback, StopOnMastery
 from mario_env import make_env
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,9 +26,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--level", default="1-1", help="e.g. 1-1, 1-2, 8-4")
     p.add_argument("--num-envs", type=int, default=10,
                    help="parallel emulators (match your CPU core count to train fastest)")
-    p.add_argument("--total-steps", type=int, default=5_000_000)
+    p.add_argument("--stop-on-mastery", action="store_true",
+                   help="stop when >=50%% of the last 100 runs clear the level")
+    p.add_argument("--total-steps", type=int, default=5_000_000,
+                   help="steps to train in THIS session (on top of any resumed steps)")
     p.add_argument("--realtime", action="store_true",
                    help="pace the game to real NES speed for smooth watching "
                         "(training runs ~2x slower)")
@@ -51,10 +55,13 @@ def main() -> None:
     # save-on-exit path in the finally block too
     signal.signal(signal.SIGTERM, _graceful_term)
     args = parse_args()
-    ghost = Ghost()
-    print(f"ghost to beat: {ghost.finish_time_s:.2f}s ({ghost.source})")
+    ghost = ghost_mod.for_level(args.level)
+    if ghost:
+        print(f"[{args.level}] ghost to beat: {ghost.finish_time_s:.2f}s ({ghost.source})")
+    else:
+        print(f"[{args.level}] no ghost trace; training without one")
 
-    env = SubprocVecEnv([make_env(i) for i in range(args.num_envs)])
+    env = SubprocVecEnv([make_env(i, args.level) for i in range(args.num_envs)])
     env = VecMonitor(env)
     env = VecFrameStack(env, n_stack=4)
 
@@ -78,23 +85,30 @@ def main() -> None:
             verbose=1,
         )
 
-    callbacks = CallbackList([
+    cb_list = [
         CheckpointCallback(
             save_freq=max(args.checkpoint_every // args.num_envs, 1),
             save_path=str(ROOT / "checkpoints"),
-            name_prefix="ppo_mario",
+            name_prefix=f"ppo_mario_{args.level}",
         ),
         GhostRenderCallback(ghost, args.num_envs, realtime=args.realtime,
-                            display=not args.no_display, verbose=1),
-    ])
+                            display=not args.no_display, level=args.level,
+                            verbose=1),
+    ]
+    if args.stop_on_mastery:
+        cb_list.append(StopOnMastery())
+    callbacks = CallbackList(cb_list)
 
     try:
+        # SB3 treats total_timesteps as ADDITIONAL steps when
+        # reset_num_timesteps=False, so this is per-session in both cases
         model.learn(total_timesteps=args.total_steps, callback=callbacks,
                     reset_num_timesteps=args.resume is None)
     finally:
-        model.save(ROOT / "checkpoints" / "ppo_mario_latest")
+        name = f"ppo_mario_{args.level}_latest"
+        model.save(ROOT / "checkpoints" / name)
         env.close()
-        print("saved checkpoints/ppo_mario_latest.zip")
+        print(f"saved checkpoints/{name}.zip")
 
 
 if __name__ == "__main__":

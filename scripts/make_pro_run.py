@@ -8,13 +8,14 @@ jump leads to a dead end later (e.g. a landing that can't avoid the pit),
 backtrack and take the next-best jump for the previous obstacle.
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
 
 import gym_super_mario_bros
 
-OUT = Path(__file__).resolve().parents[1] / "data" / "ghost_1_1.json"
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 RUN = 128 | 2  # right + B
 JUMP_DURATIONS = (28, 22, 16, 10, 6)
 SEARCH_WINDOW = 110       # how many frames before the stall to try presses
@@ -71,7 +72,12 @@ def find_candidates(env, jumps, stall, stall_x):
 
 
 def main() -> None:
-    env = gym_super_mario_bros.make("SuperMarioBros-1-1-v0")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--level", default="1-1")
+    args = parser.parse_args()
+    out = DATA_DIR / f"ghost_{args.level.replace('-', '_')}.json"
+
+    env = gym_super_mario_bros.make(f"SuperMarioBros-{args.level}-v0")
     jumps: list[tuple[int, int]] = []
     stack: list[tuple[list, list]] = []
 
@@ -102,7 +108,7 @@ def main() -> None:
 
     y_cal = GROUND_TOP - ys[0]
     ghost = {
-        "level": "1-1",
+        "level": args.level,
         "source": f"auto-tuned WR-style speedrun ({len(jumps)} jumps, "
                   f"game timer at flag: {time_left})",
         "fps": 60,
@@ -114,9 +120,9 @@ def main() -> None:
         "y_top": [y + y_cal for y in ys],
         "jumps": sorted(jumps),
     }
-    OUT.write_text(json.dumps(ghost))
-    print(f"ghost written: {ghost['finish_time_s']}s to flag, {len(jumps)} jumps, "
-          f"timer left {time_left}")
+    out.write_text(json.dumps(ghost))
+    print(f"[{args.level}] ghost written: {ghost['finish_time_s']}s to flag, "
+          f"{len(jumps)} jumps, timer left {time_left}")
 
 
 if __name__ == "__main__":

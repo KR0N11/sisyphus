@@ -10,6 +10,7 @@ Two display paces:
 """
 
 import time
+from collections import deque
 from pathlib import Path
 
 import cv2
@@ -72,10 +73,11 @@ def enforce_storage_budget() -> None:
 
 
 class GhostRenderCallback(BaseCallback):
-    def __init__(self, ghost: Ghost, num_envs: int, realtime: bool = False,
-                 display: bool = True, verbose: int = 0):
+    def __init__(self, ghost: Ghost | None, num_envs: int, realtime: bool = False,
+                 display: bool = True, level: str = "1-1", verbose: int = 0):
         super().__init__(verbose)
         self.ghost = ghost
+        self.level = level
         self.num_envs = num_envs
         self.realtime = realtime
         self.display = display
@@ -105,8 +107,9 @@ class GhostRenderCallback(BaseCallback):
                     if self.best_clear_s is None or clear_s < self.best_clear_s:
                         self.best_clear_s = clear_s
                         if self.verbose:
-                            print(f"new best clear: {clear_s:.2f}s "
-                                  f"(ghost: {self.ghost.finish_time_s:.2f}s)")
+                            ref = (f"(ghost: {self.ghost.finish_time_s:.2f}s)"
+                                   if self.ghost else "")
+                            print(f"[{self.level}] new best clear: {clear_s:.2f}s {ref}")
                 self.ep_steps[i] = 0
 
         now = time.monotonic()
@@ -145,7 +148,8 @@ class GhostRenderCallback(BaseCallback):
                    "frame": self.ep_steps[i] * FRAME_SKIP}
                   for i in range(self.num_envs)]
         stats = {"steps": self.num_timesteps, "episodes": self.episodes,
-                 "flags": self.flags, "best": self.best_clear_s}
+                 "flags": self.flags, "best": self.best_clear_s,
+                 "level": self.level}
         return compose(frames, states, self.ghost, stats)
 
     def _render(self, now: float) -> None:
@@ -158,3 +162,31 @@ class GhostRenderCallback(BaseCallback):
         if self.display:
             cv2.imshow("mario-rl: AI vs WR ghost", img)
             cv2.waitKey(1)
+
+
+class StopOnMastery(BaseCallback):
+    """End training once the level is mastered: at least `min_flags` total
+    clears and a clear rate of `rate` over the last `window` episodes."""
+
+    def __init__(self, window: int = 100, rate: float = 0.5,
+                 min_flags: int = 30, verbose: int = 1):
+        super().__init__(verbose)
+        self.recent = deque(maxlen=window)
+        self.rate = rate
+        self.min_flags = min_flags
+        self.flags = 0
+
+    def _on_step(self) -> bool:
+        for i, done in enumerate(self.locals["dones"]):
+            if done:
+                cleared = bool(self.locals["infos"][i].get("flag_get"))
+                self.recent.append(cleared)
+                self.flags += cleared
+        if (self.flags >= self.min_flags
+                and len(self.recent) == self.recent.maxlen
+                and sum(self.recent) / len(self.recent) >= self.rate):
+            if self.verbose:
+                print(f"mastery reached: {sum(self.recent)}/{len(self.recent)} "
+                      f"recent episodes cleared, stopping level")
+            return False
+        return True

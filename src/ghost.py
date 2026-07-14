@@ -8,7 +8,18 @@ trace in the same JSON format is a drop-in replacement.
 import json
 from pathlib import Path
 
-GHOST_PATH = Path(__file__).resolve().parents[1] / "data" / "ghost_1_1.json"
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+GHOST_PATH = DATA_DIR / "ghost_1_1.json"
+
+
+def ghost_path(level: str) -> Path:
+    return DATA_DIR / f"ghost_{level.replace('-', '_')}.json"
+
+
+def for_level(level: str):
+    """Ghost for this level, or None when no trace has been recorded."""
+    path = ghost_path(level)
+    return Ghost(path) if path.exists() else None
 
 
 GROUND_TOP = 192  # screen y of a grounded small Mario's sprite top
