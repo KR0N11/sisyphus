@@ -20,8 +20,22 @@ from hud import compose, with_banner
 from mario_env import FRAME_SKIP
 
 SNAPSHOT = Path(__file__).resolve().parents[1] / "runs" / "latest.png"
+CKPT_DIR = Path(__file__).resolve().parents[1] / "checkpoints"
 FAST_RENDER_PERIOD = 0.1   # seconds between window refreshes in fast mode
 SNAPSHOT_PERIOD = 2.0      # seconds between runs/latest.png writes
+KEEP_RECENT_CKPTS = 5      # newest step-numbered checkpoints to keep
+MILESTONE_STEPS = 1_000_000  # step-numbered checkpoints on these multiples survive
+
+
+def prune_checkpoints() -> None:
+    """Keep the newest N step checkpoints plus 1M-step milestones."""
+    def step_of(p: Path) -> int:
+        return int(p.stem.split("_")[-2])
+
+    ckpts = sorted(CKPT_DIR.glob("ppo_mario_*_steps.zip"), key=step_of)
+    for p in ckpts[:-KEEP_RECENT_CKPTS]:
+        if step_of(p) % MILESTONE_STEPS:
+            p.unlink(missing_ok=True)
 
 
 class GhostRenderCallback(BaseCallback):
@@ -80,6 +94,7 @@ class GhostRenderCallback(BaseCallback):
     def _on_rollout_start(self) -> None:
         self._rollout_start_eps = self.episodes
         self._next_step_t = None  # resync realtime pacing after the update
+        prune_checkpoints()
 
     def _on_rollout_end(self) -> None:
         """Called right before the PPO update: label the pause on screen."""
