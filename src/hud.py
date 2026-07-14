@@ -62,6 +62,10 @@ def compose(frames, states, ghost, stats):
     stats: {steps, episodes, flags, best} for the header."""
     n = len(frames)
     cols = math.ceil(math.sqrt(n))
+    for c in range(cols, min(cols + 3, n) + 1):
+        if n % c == 0:  # prefer a grid with no empty cells (10 -> 5x2)
+            cols = c
+            break
     rows = math.ceil(n / cols)
     grid = np.zeros((rows * TILE_H, cols * TILE_W, 3), np.uint8)
 
