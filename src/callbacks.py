@@ -23,6 +23,7 @@ class GhostRenderCallback(BaseCallback):
         self.display = display
         self.ep_steps = [0] * num_envs
         self.last_x = [0] * num_envs
+        self.last_screen_x = [0] * num_envs
         self.episodes = 0
         self.flags = 0
         self.best_clear_s: float | None = None
@@ -33,6 +34,7 @@ class GhostRenderCallback(BaseCallback):
         for i in range(self.num_envs):
             self.ep_steps[i] += 1
             self.last_x[i] = int(infos[i].get("x_pos", self.last_x[i]))
+            self.last_screen_x[i] = int(infos[i].get("left_x_pos", 0))
             if dones[i]:
                 self.episodes += 1
                 if infos[i].get("flag_get"):
@@ -51,7 +53,8 @@ class GhostRenderCallback(BaseCallback):
 
     def _render(self) -> None:
         frames = self.training_env.get_images()
-        states = [{"x": self.last_x[i], "frame": self.ep_steps[i] * FRAME_SKIP}
+        states = [{"x": self.last_x[i], "screen_x": self.last_screen_x[i],
+                   "frame": self.ep_steps[i] * FRAME_SKIP}
                   for i in range(self.num_envs)]
         stats = {"steps": self.num_timesteps, "episodes": self.episodes,
                  "flags": self.flags, "best": self.best_clear_s}

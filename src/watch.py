@@ -59,6 +59,7 @@ def main() -> None:
                     best = clear_s if best is None or clear_s < best else best
                 ep_steps[i] = 0
             states.append({"x": int(infos[i].get("x_pos", 0)),
+                           "screen_x": int(infos[i].get("left_x_pos", 0)),
                            "frame": ep_steps[i] * FRAME_SKIP})
 
         img = compose(env.get_images(), states, ghost,

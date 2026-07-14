@@ -6,6 +6,7 @@ episode frame, red when behind.
 """
 
 import math
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -18,6 +19,41 @@ GREEN = (60, 200, 60)
 RED = (50, 50, 220)
 WHITE = (240, 240, 240)
 GRAY = (90, 90, 90)
+
+GHOST_OPACITY = 0.45
+GROUND_Y = 208  # screen y of the floor's top surface in 1-1
+_SPRITE_PATH = Path(__file__).resolve().parents[1] / "data" / "ghost_sprite.png"
+_sprite_cache: list = []
+
+
+def _ghost_sprite():
+    """RGBA ghost sprite (BGR whitened for a spectral look), loaded once."""
+    if not _sprite_cache:
+        rgba = cv2.imread(str(_SPRITE_PATH), cv2.IMREAD_UNCHANGED)
+        if rgba is None:
+            _sprite_cache.append(None)
+        else:
+            bgr = (rgba[:, :, :3].astype(np.float32) * 0.55 + 255 * 0.45)
+            alpha = rgba[:, :, 3].astype(np.float32) / 255.0 * GHOST_OPACITY
+            _sprite_cache.append((bgr, alpha[:, :, None]))
+    return _sprite_cache[0]
+
+
+def _overlay_ghost(tile, ghost_x, cam_x):
+    """Blend the translucent pro-Mario at the ghost's world x on this tile."""
+    sprite = _ghost_sprite()
+    if sprite is None:
+        return
+    bgr, alpha = sprite
+    h, w = bgr.shape[:2]
+    sx, sy = int(ghost_x - cam_x), GROUND_Y - h
+    if sx + w <= 0 or sx >= TILE_W:
+        return
+    x0, x1 = max(sx, 0), min(sx + w, TILE_W)
+    cx0, cx1 = x0 - sx, x1 - sx
+    region = tile[sy:sy + h, x0:x1].astype(np.float32)
+    a = alpha[:, cx0:cx1]
+    tile[sy:sy + h, x0:x1] = (region * (1 - a) + bgr[:, cx0:cx1] * a).astype(np.uint8)
 
 
 def compose(frames, states, ghost, stats):
@@ -34,7 +70,9 @@ def compose(frames, states, ghost, stats):
         if tile.shape[:2] != (TILE_H, TILE_W):
             tile = cv2.resize(tile, (TILE_W, TILE_H))
         s = states[i]
-        delta = s["x"] - ghost.x_at(s["frame"])
+        ghost_x = ghost.x_at(s["frame"])
+        delta = s["x"] - ghost_x
+        _overlay_ghost(tile, ghost_x, s["x"] - s.get("screen_x", 0))
         color = GREEN if delta >= 0 else RED
         cv2.rectangle(tile, (0, 0), (TILE_W - 1, TILE_H - 1), color, 3)
         sign = "+" if delta >= 0 else ""

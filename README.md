@@ -2,7 +2,7 @@
 
 PPO learns Super Mario Bros World 1-1 **from scratch** (no pretrained weights), with a live wall of parallel emulator instances all racing a world-record-pace ghost, TrackMania-AI style.
 
-Every Mario tile shows whether that instance is **ahead (green)** or **behind (red)** the ghost at the same point in its run, and a race bar at the bottom tracks the current leader against the ghost all the way to the flag.
+A **translucent ghost Mario** runs inside every tile at world-record pace (when he's on camera), so you can see each AI literally racing him. Tile borders show whether that instance is **ahead (green)** or **behind (red)** the ghost at the same point in its run, and a race bar at the bottom tracks the current leader against the ghost all the way to the flag.
 
 ## How it works
 
@@ -10,7 +10,7 @@ Every Mario tile shows whether that instance is **ahead (green)** or **behind (r
 - **The AI**: Stable-Baselines3 PPO with a small CNN. It sees 4 stacked 84x84 grayscale frames (frame skip 4) and picks one of 7 `SIMPLE_MOVEMENT` actions. Community-proven hyperparameters: lr `1e-4`, gamma `0.9`, 512-step rollouts, 10 epochs per update.
 - **Reward**: the env's built-in speed-biased reward (rightward velocity + clock penalty + death penalty), shaped with score-delta/40, +50 for the flag, -50 for dying, scaled by 1/10 (`src/mario_env.py`).
 - **The ghost** (`data/ghost_1_1.json`): a frame-by-frame x-position trace at world-record pace, finishing 1-1 in **20.77s**. The bundled trace is a synthetic max-run-speed model (`scripts/make_ghost.py`); any real WR/TAS trace in the same JSON format is a drop-in replacement.
-- **The display** (`src/hud.py`): full-color frames from every emulator are tiled into one mosaic with per-instance ghost deltas, a stats header (steps, episodes, flags, best clear time), and the leader-vs-ghost race bar.
+- **The display** (`src/hud.py`): full-color frames from every emulator are tiled into one mosaic. Each tile gets the low-opacity ghost Mario sprite drawn at the ghost's world position (camera offset derived from the env's `left_x_pos`), plus per-instance ghost deltas, a stats header (steps, episodes, flags, best clear time), and the leader-vs-ghost race bar. The sprite itself is extracted from the emulator at runtime by `scripts/make_ghost_sprite.py` (Mario jumps, we grab him mid-air against clean sky).
 
 ## Setup
 
