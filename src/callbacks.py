@@ -175,6 +175,7 @@ class StopOnMastery(BaseCallback):
         self.rate = rate
         self.min_flags = min_flags
         self.flags = 0
+        self.mastered = False
 
     def _on_step(self) -> bool:
         for i, done in enumerate(self.locals["dones"]):
@@ -185,6 +186,7 @@ class StopOnMastery(BaseCallback):
         if (self.flags >= self.min_flags
                 and len(self.recent) == self.recent.maxlen
                 and sum(self.recent) / len(self.recent) >= self.rate):
+            self.mastered = True
             if self.verbose:
                 print(f"mastery reached: {sum(self.recent)}/{len(self.recent)} "
                       f"recent episodes cleared, stopping level")

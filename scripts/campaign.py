@@ -34,8 +34,9 @@ def main() -> None:
     for level in args.route.split(","):
         level = level.strip()
         latest = ROOT / "checkpoints" / f"ppo_mario_{level}_latest.zip"
-        if latest.exists():
-            print(f"[{level}] already trained, skipping")
+        mastered = ROOT / "checkpoints" / f"ppo_mario_{level}.mastered"
+        if mastered.exists() and latest.exists():
+            print(f"[{level}] already mastered, skipping")
             prev_model = latest
             continue
 
@@ -56,7 +57,11 @@ def main() -> None:
             cmd.append("--realtime")
         if args.no_display:
             cmd.append("--no-display")
-        if prev_model:
+        if latest.exists():
+            # unfinished level from an earlier session: continue its training
+            cmd += ["--resume", str(latest), "--ent-coef", "0.03"]
+            print(f"[{level}] resuming unfinished level from {latest.name}")
+        elif prev_model:
             # transferred brains are over-confident on unseen levels; force
             # exploration back up while the new level is being learned
             cmd += ["--resume", str(prev_model), "--ent-coef", "0.03"]

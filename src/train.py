@@ -101,8 +101,9 @@ def main() -> None:
                             display=not args.no_display, level=args.level,
                             verbose=1),
     ]
-    if args.stop_on_mastery:
-        cb_list.append(StopOnMastery())
+    mastery_cb = StopOnMastery() if args.stop_on_mastery else None
+    if mastery_cb:
+        cb_list.append(mastery_cb)
     callbacks = CallbackList(cb_list)
 
     try:
@@ -115,6 +116,9 @@ def main() -> None:
         model.save(ROOT / "checkpoints" / name)
         env.close()
         print(f"saved checkpoints/{name}.zip")
+        if mastery_cb and mastery_cb.mastered:
+            (ROOT / "checkpoints" / f"ppo_mario_{args.level}.mastered").touch()
+            print(f"level {args.level} marked as mastered")
 
 
 if __name__ == "__main__":
