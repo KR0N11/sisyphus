@@ -57,7 +57,9 @@ def main() -> None:
         if args.no_display:
             cmd.append("--no-display")
         if prev_model:
-            cmd += ["--resume", str(prev_model)]
+            # transferred brains are over-confident on unseen levels; force
+            # exploration back up while the new level is being learned
+            cmd += ["--resume", str(prev_model), "--ent-coef", "0.03"]
             print(f"[{level}] training with transfer from {prev_model.name}")
         else:
             print(f"[{level}] training from scratch")

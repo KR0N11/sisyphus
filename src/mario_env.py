@@ -49,6 +49,34 @@ class SpeedReward(gym.Wrapper):
         return obs, reward / 10.0, terminated, truncated, info
 
 
+class StuckTruncate(gym.Wrapper):
+    """End the episode when Mario makes no forward progress for a while.
+    Kills the 'stand still until the timer runs out' local optimum: idling
+    now leads straight to the same -50 as dying, much sooner."""
+
+    def __init__(self, env: gym.Env, max_idle_frames: int = 600):
+        super().__init__(env)
+        self.max_idle = max_idle_frames
+        self._best_x = 0
+        self._idle = 0
+
+    def reset(self, **kwargs):
+        self._best_x, self._idle = 0, 0
+        return self.env.reset(**kwargs)
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        x = int(info.get("x_pos", 0))
+        if x > self._best_x:
+            self._best_x, self._idle = x, 0
+        else:
+            self._idle += 1
+        if self._idle >= self.max_idle and not (terminated or truncated):
+            truncated = True
+            reward -= 50.0 / 10.0  # same failure signal SpeedReward gives (scaled)
+        return obs, reward, terminated, truncated, info
+
+
 def make_env(rank: int = 0, level: str = "1-1"):
     """Thunk for SubprocVecEnv: each subprocess builds its own emulator."""
 
@@ -56,6 +84,7 @@ def make_env(rank: int = 0, level: str = "1-1"):
         env = gym_super_mario_bros.make(env_id(level), render_mode="rgb_array")
         env = JoypadSpace(env, SIMPLE_MOVEMENT)
         env = SpeedReward(env)
+        env = StuckTruncate(env)
         env = MaxAndSkipEnv(env, skip=FRAME_SKIP)
         env = WarpFrame(env)
         return env

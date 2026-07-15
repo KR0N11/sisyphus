@@ -31,6 +31,9 @@ def parse_args() -> argparse.Namespace:
                    help="parallel emulators (match your CPU core count to train fastest)")
     p.add_argument("--stop-on-mastery", action="store_true",
                    help="stop when >=50%% of the last 100 runs clear the level")
+    p.add_argument("--ent-coef", type=float, default=None,
+                   help="override entropy bonus (e.g. 0.03 to force a transferred "
+                        "brain to explore a new level)")
     p.add_argument("--total-steps", type=int, default=5_000_000,
                    help="steps to train in THIS session (on top of any resumed steps)")
     p.add_argument("--realtime", action="store_true",
@@ -68,6 +71,9 @@ def main() -> None:
     if args.resume:
         model = PPO.load(args.resume, env=env, device=args.device)
         print(f"resumed from {args.resume} at {model.num_timesteps:,} steps")
+        if args.ent_coef is not None:
+            model.ent_coef = args.ent_coef
+            print(f"entropy bonus overridden to {args.ent_coef}")
     else:
         model = PPO(
             "CnnPolicy",
