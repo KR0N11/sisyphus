@@ -1,4 +1,18 @@
-# Session Handoff (paused 2026-07-14 evening)
+# Session Handoff (updated 2026-07-15, paused mid-campaign)
+
+## 2026-07-15 update (supersedes "Where things stand" below where they conflict)
+
+- Campaign switched to FAST mode per user (no --realtime) and LOW-HEAT profile: `--num-envs 6 --no-display` (user's laptop was overheating; RAM kept modest).
+- **1-2 is NOT cleared yet.** It got stuck at x≈978 (local optimum: standing still). Fixes shipped and active: `StuckTruncate` wrapper (idle >600 frames = truncated with failure penalty) and `--ent-coef 0.03` on transferred brains. 1-2 has ~1.09M total steps in `ppo_mario_1-2_latest.zip` (includes 450k of post-fix training, zero clears so far when paused).
+- **Mastery markers**: campaign now skips a level only if `checkpoints/ppo_mario_<level>.mastered` exists (1-1 has one); unfinished levels resume their own `_latest`. The old "skips any level with a checkpoint" gotcha is fixed.
+- 4-1 ghost tuning was interrupted; `data/ghost_4_1.json` does NOT exist yet (campaign will re-tune it automatically).
+- Resume command (fast, low-heat): `nohup nice -n 10 .venv/bin/python -u scripts/campaign.py --device mps --num-envs 6 --no-display > runs/campaign.log 2>&1 &`
+- Plan after all levels clear: real-time relay showcase (user wants runs sped up during training, real time for the final watch).
+- If 1-2 still won't clear after the current fixes get a fair shot (~1M more steps), next escalation: exploration bonus for new max-x milestones per episode.
+
+---
+
+# Original handoff (2026-07-14 evening)
 
 Read this to continue the project from exactly where it stopped, in any session or tool. Full background and concepts: `docs/JOURNEY.md`. Original research plan: `PLAN.md`.
 
