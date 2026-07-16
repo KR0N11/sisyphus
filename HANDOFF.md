@@ -1,5 +1,10 @@
 # Session Handoff (updated 2026-07-15, paused mid-campaign)
 
+## 2026-07-16 update (most recent)
+
+- 1-2 BROKE THROUGH after the anti-stuck fixes: best clear 22.40s vs ghost 21.72s when paused (was permanently stuck at x≈978 before). Not yet mastered (no `.mastered` marker); resume continues it automatically.
+- Resume command unchanged: `nohup nice -n 10 .venv/bin/python -u scripts/campaign.py --device mps --num-envs 6 > runs/campaign.log 2>&1 &` (add `--no-display` for headless).
+
 ## 2026-07-15 update (supersedes "Where things stand" below where they conflict)
 
 - Campaign switched to FAST mode per user (no --realtime) and LOW-HEAT profile: `--num-envs 6 --no-display` (user's laptop was overheating; RAM kept modest).
