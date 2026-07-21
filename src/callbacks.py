@@ -139,7 +139,7 @@ class GhostRenderCallback(BaseCallback):
             return
         runs = self.episodes - getattr(self, "_rollout_start_eps", 0)
         img = with_banner(self._compose(), f"STUDYING LAST {runs} RUNS...")
-        cv2.imshow("mario-rl: AI vs WR ghost", img)
+        cv2.imshow("Sisyphus: AI vs WR ghost", img)
         cv2.waitKey(1)
 
     def _compose(self):
@@ -160,7 +160,7 @@ class GhostRenderCallback(BaseCallback):
             SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(SNAPSHOT), img)
         if self.display:
-            cv2.imshow("mario-rl: AI vs WR ghost", img)
+            cv2.imshow("Sisyphus: AI vs WR ghost", img)
             cv2.waitKey(1)
 
 

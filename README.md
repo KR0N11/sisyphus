@@ -1,4 +1,6 @@
-# mario-rl: AI vs the World Record Ghost
+# Sisyphus
+
+*Reinforcement learning as the myth made literal. The agent dies and restarts the same level thousands of times until the repetition becomes mastery, and the boulder finally reaches the top: it clears World 1-1 and beats a world-record-pace ghost.*
 
 PPO learns Super Mario Bros World 1-1 **from scratch** (no pretrained weights), with a live wall of parallel emulator instances all racing a world-record-pace ghost, TrackMania-AI style.
 

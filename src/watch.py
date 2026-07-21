@@ -68,7 +68,7 @@ def main() -> None:
         img = compose(env.get_images(), states, ghost,
                       {"steps": 0, "episodes": episodes, "flags": flags,
                        "best": best, "level": args.level})
-        cv2.imshow("mario-rl showcase: AI vs WR ghost", img)
+        cv2.imshow("Sisyphus showcase: AI vs WR ghost", img)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
         time.sleep(max(0.0, step_period - (time.monotonic() - t0)))

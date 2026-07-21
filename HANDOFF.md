@@ -27,11 +27,11 @@ Read this to continue the project from exactly where it stopped, in any session 
 - **Whole-game campaign is mid-flight**, paused during level 1-2:
   - 1-2's ghost is tuned and committed (`data/ghost_1_2.json`, 21.7s real, 13 jumps).
   - 1-2 training had only just started. `checkpoints/ppo_mario_1-2_latest.zip` exists but is nearly untrained.
-- Everything is committed and pushed to `github.com/KR0N11/mario-rl` (private).
+- Everything is committed and pushed to `github.com/KR0N11/sisyphus` (private).
 
 ## How to resume
 
-From `~/mario-rl`, the campaign command is:
+From `~/sisyphus`, the campaign command is:
 
 ```
 nohup nice -n 10 .venv/bin/python -u scripts/campaign.py --realtime --device mps > runs/campaign.log 2>&1 &
